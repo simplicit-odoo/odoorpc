@@ -7,6 +7,7 @@ import json
 import logging
 import random
 import sys
+import ssl
 
 # Python 2
 if sys.version_info[0] < 3:
@@ -61,13 +62,14 @@ def get_json_log_data(data):
 class Proxy(object):
     """Base class to implement a proxy to perform requests."""
 
-    def __init__(self, host, port, timeout=120, ssl=False, opener=None):
+    def __init__(self, host, port, timeout=120, ssl=False, opener=None, headers=None):
         self._root_url = "{http}{host}:{port}".format(
             http=(ssl and "https://" or "http://"), host=host, port=port
         )
         self._timeout = timeout
         self._builder = URLBuilder(self)
         self._opener = opener
+        self._headers = headers
         if not opener:
             cookie_jar = CookieJar()
             self._opener = build_opener(HTTPCookieProcessor(cookie_jar))
@@ -88,9 +90,9 @@ class ProxyJSON(Proxy):
     """
 
     def __init__(
-        self, host, port, timeout=120, ssl=False, opener=None, deserialize=True
+        self, host, port, timeout=120, ssl=False, opener=None, deserialize=True, headers=None
     ):
-        Proxy.__init__(self, host, port, timeout, ssl, opener)
+        Proxy.__init__(self, host, port, timeout, ssl, opener, headers)
         self._deserialize = deserialize
 
     def __call__(self, url, params=None):
@@ -110,6 +112,12 @@ class ProxyJSON(Proxy):
         data_json = json.dumps(data)
         request = Request(url=full_url, data=encode_data(data_json))
         request.add_header('Content-Type', 'application/json')
+        headers = self._headers
+        if headers:
+            for hkey in headers:
+                hvalue = headers[hkey]
+                request.add_header(hkey, hvalue)
+        ssl._create_default_https_context = ssl._create_unverified_context
         response = self._opener.open(request, timeout=self._timeout)
         if not self._deserialize:
             return response
