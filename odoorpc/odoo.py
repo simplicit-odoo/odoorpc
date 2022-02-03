@@ -65,7 +65,8 @@ class ODOO(object):
         timeout=120,
         version=None,
         opener=None,
-        headers=None
+        headers=None,
+        ssl_verify=True
     ):
         if protocol not in ['jsonrpc', 'jsonrpc+ssl']:
             txt = (
@@ -91,10 +92,11 @@ class ODOO(object):
         self._password = None
         self._db = DB(self)
         self._report = Report(self)
+        self._ssl_verify = ssl_verify
         # Instanciate the server connector
         try:
             self._connector = rpc.PROTOCOLS[protocol](
-                self._host, self._port, timeout, version, opener=opener, headers=headers
+                self._host, self._port, timeout, version, opener=opener, headers=headers, ssl_verify=ssl_verify
             )
         except rpc.error.ConnectorError as exc:
             raise error.InternalError(exc.message)

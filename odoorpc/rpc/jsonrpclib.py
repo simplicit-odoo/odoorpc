@@ -62,7 +62,7 @@ def get_json_log_data(data):
 class Proxy(object):
     """Base class to implement a proxy to perform requests."""
 
-    def __init__(self, host, port, timeout=120, ssl=False, opener=None, headers=None):
+    def __init__(self, host, port, timeout=120, ssl=False, opener=None, headers=None, ssl_verify=True):
         self._root_url = "{http}{host}:{port}".format(
             http=(ssl and "https://" or "http://"), host=host, port=port
         )
@@ -70,6 +70,7 @@ class Proxy(object):
         self._builder = URLBuilder(self)
         self._opener = opener
         self._headers = headers
+        self._ssl_verify  = ssl_verify
         if not opener:
             cookie_jar = CookieJar()
             self._opener = build_opener(HTTPCookieProcessor(cookie_jar))
@@ -90,9 +91,9 @@ class ProxyJSON(Proxy):
     """
 
     def __init__(
-        self, host, port, timeout=120, ssl=False, opener=None, deserialize=True, headers=None
+        self, host, port, timeout=120, ssl=False, opener=None, deserialize=True, headers=None, ssl_verify=True
     ):
-        Proxy.__init__(self, host, port, timeout, ssl, opener, headers)
+        Proxy.__init__(self, host, port, timeout, ssl, opener, headers, ssl_verify)
         self._deserialize = deserialize
 
     def __call__(self, url, params=None):
@@ -117,7 +118,8 @@ class ProxyJSON(Proxy):
             for hkey in headers:
                 hvalue = headers[hkey]
                 request.add_header(hkey, hvalue)
-        ssl._create_default_https_context = ssl._create_unverified_context
+        if not self._ssl_verify:
+            ssl._create_default_https_context = ssl._create_unverified_context
         response = self._opener.open(request, timeout=self._timeout)
         if not self._deserialize:
             return response
@@ -134,7 +136,7 @@ class ProxyHTTP(Proxy):
     to all HTTP methods.
     """
 
-    def __call__(self, url, data=None, headers=None):
+    def __call__(self, url, data=None, headers=None, ssl_verify=True):
         if url.startswith('/'):
             url = url[1:]
         full_url = self._get_full_url(url)
@@ -150,6 +152,8 @@ class ProxyHTTP(Proxy):
             for hkey in headers:
                 hvalue = headers[hkey]
                 request.add_header(hkey, hvalue)
+        if not self._ssl_verify:
+            ssl._create_default_https_context = ssl._create_unverified_context
         response = self._opener.open(request, timeout=self._timeout)
         logger.debug(
             LOG_HTTP_RECV_MSG,
