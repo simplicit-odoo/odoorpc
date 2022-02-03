@@ -199,6 +199,8 @@ class ConnectorJSONRPC(Connector):
         version=None,
         deserialize=True,
         opener=None,
+        headers=None,
+        ssl_verify=True
     ):
         super(ConnectorJSONRPC, self).__init__(host, port, timeout, version)
         self.deserialize = deserialize
@@ -208,6 +210,8 @@ class ConnectorJSONRPC(Connector):
             cookie_jar = CookieJar()
             opener = build_opener(HTTPCookieProcessor(cookie_jar))
         self._opener = opener
+        self._headers=headers
+        self._ssl_verify=ssl_verify
         self._proxy_json, self._proxy_http = self._get_proxies()
 
     def _get_proxies(self):
@@ -222,6 +226,8 @@ class ConnectorJSONRPC(Connector):
             ssl=self.ssl,
             deserialize=self.deserialize,
             opener=self._opener,
+            headers=self._headers,
+            ssl_verify=self._ssl_verify
         )
         proxy_http = jsonrpclib.ProxyHTTP(
             self.host,
@@ -229,6 +235,8 @@ class ConnectorJSONRPC(Connector):
             self._timeout,
             ssl=self.ssl,
             opener=self._opener,
+            headers=self._headers,
+            ssl_verify=self._ssl_verify
         )
         # Detect the server version
         if self.version is None:
@@ -284,9 +292,11 @@ class ConnectorJSONRPCSSL(ConnectorJSONRPC):
         version=None,
         deserialize=True,
         opener=None,
+        headers=None,
+        ssl_verify=True
     ):
         super(ConnectorJSONRPCSSL, self).__init__(
-            host, port, timeout, version, opener=opener
+            host, port, timeout, version, opener=opener, headers=headers, ssl_verify=ssl_verify
         )
         self._proxy_json, self._proxy_http = self._get_proxies()
 
